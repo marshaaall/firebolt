@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>AC's The Firebolt</title>
+        <script src="phaser.js"></script>
+        <style type="text/css">
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+
+        <script type="text/javascript">
+
+            var config = {
+                type: Phaser.AUTO,
+                width: window.innerWidth,
+                height: window.innerHeight,
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 300 },
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                },
+                scale: {
+                    mode: Phaser.Scale.FIT,
+                }
+            };
+
+            var game = new Phaser.Game(config);
+
+            let inPlay = true;
+
+            let player;
+
+            let screenCenterX;
+            let screenCenterY;
+
+            let fireballs;
+            let fireball;
+
+            // The lower the more frequent spawns
+            let fireballSpawnrate = 50;
+
+            if(window.localStorage.getItem('highscore') == null) {
+                alert("Happy Birthday!");
+                window.localStorage.setItem('highscore', 0);
+                location.reload();
+            }
+
+            let highscoreText = 'High Score: ' + window.localStorage.getItem('highscore');
+
+            function preload()
+            {
+                this.load.image('sky', 'assets/sky.png');
+                this.load.image('mountain', 'assets/mountain.jpg');
+                this.load.image('sea', 'assets/sea.jpg');
+
+                this.load.spritesheet('player', 'assets/ate.png', { frameWidth: 256, frameHeight: 400 });
+                this.load.spritesheet('fireball', 'assets/fireball.png', { frameWidth: 64, frameHeight: 140 })
+
+                screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
+                screenCenterY = this.cameras.main.worldView.y + this.cameras.main.height / 2;
+
+                loadFont('pixel', 'assets/pixel.ttf');
+
+                console.log(this);
+                console.log(game);
+            }
+
+            function create()
+            {
+                this.add.image(0, 0, 'sea').setOrigin(0, 0);
+
+                // TODO change 5 to score text length
+                score = this.add.text(screenCenterX - (48 * 1)/2, 50, 0, { fontFamily: 'pixel', fontSize: '48px', color: '#222222' });
+                highscore = this.add.text(screenCenterX - (48 * highscoreText.length) / 2, 100, highscoreText, { fontFamily: 'pixel', fontSize: '48px', color: '#222222' })
+
+                player = this.physics.add.sprite(500, 1200, 'player').setInteractive();
+                player.setCollideWorldBounds(true);
+
+                fireballs = this.physics.add.group();
+
+                this.anims.create({
+                    key: 'fly',
+                    frames: this.anims.generateFrameNumbers('player', { start: 0, end: 5 }),
+                    frameRate: 10,
+                    repeat: -1
+                });
+
+                this.anims.create({
+                    key: 'fireball',
+                    frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 7 }),
+                    frameRate: 10,
+                    repeat: -1
+                });
+
+                this.input.on('pointermove', (pointer) => {
+                    // Smooth movement of player
+                    let currentPosition = new Phaser.Math.Vector2(player.x, player.y);
+                    let gotoPosition = new Phaser.Math.Vector2(pointer.x, player.y);
+                    player.x = currentPosition.clone().lerp(gotoPosition, 0.1).x;
+                });
+
+                this.physics.add.overlap(player, fireballs, hit, null, this);
+
+                player.anims.play('fly');
+            }
+
+            function update()
+            {
+                if(inPlay) {
+                    score.setText(parseInt(score.text) + 1);
+                    score.setPosition(screenCenterX - (48 * score.text.length) / 2, 50);
+
+                    if(Math.floor(Math.random() * fireballSpawnrate) == 0) {
+                        fireball = fireballs.create(Math.floor(Math.random() * window.innerWidth), -20, 'fireball');
+                        fireball.anims.play('fireball');
+                    }
+                }
+
+                switch(parseInt(score.text)) {
+                    case 1000:
+                        fireballSpawnrate = 40;
+                        break;
+                    case 5000:
+                        fireballSpawnrate = 30;
+                        break;
+                    case 10000:
+                        fireballSpawnrate = 20;
+                        break;
+                }
+            }
+
+            function hit() {
+                inPlay = false;
+                player.setVelocityY(-80);
+                player.setCollideWorldBounds(false);
+
+                if(parseInt(score.text) > parseInt(window.localStorage.getItem('highscore'))) {
+                    window.localStorage.setItem('highscore', score.text);
+                }
+
+                setTimeout(() => location.reload(), 5000);
+            }
+
+            function loadFont(name, url) {
+                var newFont = new FontFace(name, `url(${url})`);
+                newFont.load().then(function (loaded) {
+                    document.fonts.add(loaded);
+                }).catch(function (error) {
+                    return error;
+                });
+            }
+        </script>
+
+    </body>
+</html>
